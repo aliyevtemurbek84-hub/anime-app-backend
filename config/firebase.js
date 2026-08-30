@@ -6,9 +6,15 @@ dotenv.config();
 // Firebase Console > Project Settings > Service Accounts > Generate new private key
 // Yuklab olingan JSON faylni serviceAccountKey.json deb saqlang (config papkasida)
 // va uni .gitignore ga qo'shishni unutmang!
-import { readFileSync } from "fs";
+import { readFileSync, existsSync } from "fs";
+
+const renderSecretPath = "/etc/secrets/serviceAccountKey.json";
+const localPath = new URL("./serviceAccountKey.json", import.meta.url);
+
 const serviceAccount = JSON.parse(
-  readFileSync(new URL("./serviceAccountKey.json", import.meta.url))
+  existsSync(renderSecretPath)
+    ? readFileSync(renderSecretPath)
+    : readFileSync(localPath)
 );
 
 admin.initializeApp({
