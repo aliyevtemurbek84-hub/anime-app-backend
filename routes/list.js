@@ -1,7 +1,12 @@
 import express from "express";
-import { db, FieldValue } from "../config/firebase.js";
+import { db } from "../config/firebase.js";
 
 const router = express.Router();
+
+// XP dan level hisoblash: har 100 XP = 1 level
+function calculateLevel(xp) {
+  return Math.floor(xp / 100) + 1;
+}
 
 // POST /user/list/add
 // body: { userId, animeId, status: "watching" | "completed" | "plan_to_watch" | "dropped" }
@@ -29,12 +34,22 @@ router.post("/add", async (req, res) => {
       { merge: true }
     );
 
-    // Gamification: ro'yxatga qo'shganda ozgina XP berish
-    await db.collection("users").doc(userId).update({
-      xp: FieldValue.increment(5),
+    // Gamification: XP va level'ni birgalikda, xavfsiz (transaction) yangilash
+    const userRef = db.collection("users").doc(userId);
+    const levelInfo = await db.runTransaction(async (t) => {
+      const userSnap = await t.get(userRef);
+      const currentXp = userSnap.data()?.xp || 0;
+      const newXp = currentXp + 5;
+      const newLevel = calculateLevel(newXp);
+      t.update(userRef, { xp: newXp, level: newLevel });
+      return { xp: newXp, level: newLevel };
     });
 
-    res.json({ message: "Ro'yxatga qo'shildi" });
+    res.json({
+      message: "Ro'yxatga qo'shildi",
+      xp: levelInfo.xp,
+      level: levelInfo.level,
+    });
   } catch (err) {
     res.status(500).json({ error: "Ro'yxatga qo'shishda xatolik", details: err.message });
   }
