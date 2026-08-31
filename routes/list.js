@@ -23,10 +23,46 @@ const BADGE_DEFINITIONS = [
     check: (stats) => stats.totalAnime >= 10,
   },
   {
+    id: "collector_25",
+    name: "Kolleksioner",
+    description: "25 ta anime ro'yxatga qo'shildi",
+    check: (stats) => stats.totalAnime >= 25,
+  },
+  {
+    id: "dedicated_50",
+    name: "Sodiq tomoshabin",
+    description: "50 ta anime ro'yxatga qo'shildi",
+    check: (stats) => stats.totalAnime >= 50,
+  },
+  {
     id: "hundred_club",
     name: "100 Anime Club",
     description: "100 ta anime ro'yxatga qo'shildi",
     check: (stats) => stats.totalAnime >= 100,
+  },
+  {
+    id: "completionist_5",
+    name: "Tugatuvchi",
+    description: "5 ta anime'ni tugatdingiz",
+    check: (stats) => stats.completedCount >= 5,
+  },
+  {
+    id: "completionist_25",
+    name: "Marafonchi",
+    description: "25 ta anime'ni tugatdingiz",
+    check: (stats) => stats.completedCount >= 25,
+  },
+  {
+    id: "planner",
+    name: "Rejachi",
+    description: "10 ta anime'ni rejaga qo'shdingiz",
+    check: (stats) => stats.planCount >= 10,
+  },
+  {
+    id: "level_3",
+    name: "O'sib boruvchi",
+    description: "3-levelga yetdingiz",
+    check: (stats) => stats.level >= 3,
   },
   {
     id: "level_5",
@@ -40,6 +76,12 @@ const BADGE_DEFINITIONS = [
     description: "10-levelga yetdingiz",
     check: (stats) => stats.level >= 10,
   },
+  {
+    id: "level_20",
+    name: "Afsonaviy",
+    description: "20-levelga yetdingiz",
+    check: (stats) => stats.level >= 20,
+  },
 ];
 
 // Foydalanuvchi shartlarga mos badge'larni tekshirish va yangilarini qaytarish
@@ -48,9 +90,13 @@ async function checkAndAwardBadges(userId, userRef, currentBadges, level) {
     .collection("anime_lists")
     .where("userId", "==", userId)
     .get();
-  const totalAnime = listSnapshot.size;
 
-  const stats = { totalAnime, level };
+  const allDocs = listSnapshot.docs.map((d) => d.data());
+  const totalAnime = allDocs.length;
+  const completedCount = allDocs.filter((d) => d.status === "completed").length;
+  const planCount = allDocs.filter((d) => d.status === "plan_to_watch").length;
+
+  const stats = { totalAnime, completedCount, planCount, level };
   const existingBadgeIds = (currentBadges || []).map((b) =>
     typeof b === "string" ? b : b.id
   );
@@ -124,6 +170,35 @@ router.post("/add", async (req, res) => {
     });
   } catch (err) {
     res.status(500).json({ error: "Ro'yxatga qo'shishda xatolik", details: err.message });
+  }
+});
+
+// PUT /user/list/status
+// body: { userId, animeId, status } - statusni o'zgartirish uchun (masalan completed'ga o'tkazish)
+router.put("/status", async (req, res) => {
+  try {
+    const { userId, animeId, status } = req.body;
+
+    if (!userId || !animeId || !status) {
+      return res.status(400).json({ error: "userId, animeId va status maydonlari kerak" });
+    }
+
+    const docId = `${userId}_${animeId}`;
+    await db.collection("anime_lists").doc(docId).update({
+      status,
+      updatedAt: new Date().toISOString(),
+    });
+
+    const userRef = db.collection("users").doc(userId);
+    const userSnap = await userRef.get();
+    const currentBadges = userSnap.data()?.badges || [];
+    const currentLevel = userSnap.data()?.level || 1;
+
+    const newBadges = await checkAndAwardBadges(userId, userRef, currentBadges, currentLevel);
+
+    res.json({ message: "Status yangilandi", newBadges });
+  } catch (err) {
+    res.status(500).json({ error: "Statusni yangilashda xatolik", details: err.message });
   }
 });
 
