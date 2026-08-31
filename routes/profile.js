@@ -1,51 +1,98 @@
 import express from "express";
 import { db } from "../config/firebase.js";
+import axios from "axios";
 
 const router = express.Router();
 
-// Oldindan belgilangan avatar variantlari (DiceBear - bepul, URL orqali ishlaydigan xizmat)
-// Fayl yuklash shart emas - har biri shunchaki tashqi rasm manzili
-const AVATAR_OPTIONS = [
-  { id: "avatar_1", url: "https://api.dicebear.com/9.x/adventurer/png?seed=Naruto&backgroundColor=b6e3f4" },
-  { id: "avatar_2", url: "https://api.dicebear.com/9.x/adventurer/png?seed=Sasuke&backgroundColor=c0aede" },
-  { id: "avatar_3", url: "https://api.dicebear.com/9.x/adventurer/png?seed=Luffy&backgroundColor=ffd5dc" },
-  { id: "avatar_4", url: "https://api.dicebear.com/9.x/adventurer/png?seed=Goku&backgroundColor=ffdfbf" },
-  { id: "avatar_5", url: "https://api.dicebear.com/9.x/adventurer/png?seed=Levi&backgroundColor=d1d4f9" },
-  { id: "avatar_6", url: "https://api.dicebear.com/9.x/adventurer/png?seed=Mikasa&backgroundColor=c0f4de" },
-  { id: "avatar_7", url: "https://api.dicebear.com/9.x/adventurer/png?seed=Eren&backgroundColor=f4c0c0" },
-  { id: "avatar_8", url: "https://api.dicebear.com/9.x/adventurer/png?seed=Tanjiro&backgroundColor=c0e4f4" },
-  { id: "avatar_9", url: "https://api.dicebear.com/9.x/adventurer/png?seed=Nezuko&backgroundColor=f4d9c0" },
-  { id: "avatar_10", url: "https://api.dicebear.com/9.x/adventurer/png?seed=Itachi&backgroundColor=e0c0f4" },
-  { id: "avatar_11", url: "https://api.dicebear.com/9.x/adventurer/png?seed=Gojo&backgroundColor=c0f4e8" },
-  { id: "avatar_12", url: "https://api.dicebear.com/9.x/adventurer/png?seed=Zenitsu&backgroundColor=f4f0c0" },
+const ANILIST_URL = "https://graphql.anilist.co";
+
+// Mashhur anime personajlari - shulardan avatar tanlanadi
+const CHARACTER_NAMES = [
+  "Naruto Uzumaki",
+  "Monkey D. Luffy",
+  "Son Goku",
+  "Itachi Uchiha",
+  "Levi Ackerman",
+  "Mikasa Ackerman",
+  "Satoru Gojo",
+  "Tanjiro Kamado",
+  "Nezuko Kamado",
+  "Light Yagami",
+  "Edward Elric",
+  "Zenitsu Agatsuma",
 ];
 
+// Natijalarni serverda vaqtincha eslab qolish (har so'rovda AniList'ga
+// qayta murojaat qilmaslik uchun)
+let cachedAvatars = null;
+let cacheTime = 0;
+const CACHE_DURATION = 1000 * 60 * 60 * 12; // 12 soat
+
+async function fetchCharacterImage(name) {
+  const query = `
+    query ($search: String) {
+      Character(search: $search) {
+        image { large }
+      }
+    }
+  `;
+  const res = await axios.post(
+    ANILIST_URL,
+    { query, variables: { search: name } },
+    { headers: { "Content-Type": "application/json" }, timeout: 8000 }
+  );
+  return res.data?.data?.Character?.image?.large || null;
+}
+
+async function getAvatarList() {
+  const now = Date.now();
+  if (cachedAvatars && now - cacheTime < CACHE_DURATION) {
+    return cachedAvatars;
+  }
+
+  const results = [];
+  for (let i = 0; i < CHARACTER_NAMES.length; i++) {
+    try {
+      const url = await fetchCharacterImage(CHARACTER_NAMES[i]);
+      if (url) {
+        results.push({ id: `avatar_${i + 1}`, name: CHARACTER_NAMES[i], url });
+      }
+    } catch (e) {
+      // Agar bironta personaj topilmasa, shunchaki o'tkazib yuboramiz
+    }
+  }
+
+  cachedAvatars = results;
+  cacheTime = now;
+  return results;
+}
+
 // GET /profile/avatars - barcha mavjud avatar variantlarini olish
-router.get("/avatars", (req, res) => {
-  res.json(AVATAR_OPTIONS);
+router.get("/avatars", async (req, res) => {
+  try {
+    const avatars = await getAvatarList();
+    res.json(avatars);
+  } catch (err) {
+    res.status(500).json({ error: "Avatarlarni olishda xatolik", details: err.message });
+  }
 });
 
 // PUT /profile/avatar - foydalanuvchi avatarini o'rnatish
-// body: { userId, avatarId }
+// body: { userId, avatarId, avatarUrl }
 router.put("/avatar", async (req, res) => {
   try {
-    const { userId, avatarId } = req.body;
+    const { userId, avatarId, avatarUrl } = req.body;
 
-    if (!userId || !avatarId) {
-      return res.status(400).json({ error: "userId va avatarId kerak" });
-    }
-
-    const selected = AVATAR_OPTIONS.find((a) => a.id === avatarId);
-    if (!selected) {
-      return res.status(400).json({ error: "Noto'g'ri avatarId" });
+    if (!userId || !avatarId || !avatarUrl) {
+      return res.status(400).json({ error: "userId, avatarId va avatarUrl kerak" });
     }
 
     await db.collection("users").doc(userId).update({
-      avatarUrl: selected.url,
-      avatarId: selected.id,
+      avatarUrl,
+      avatarId,
     });
 
-    res.json({ message: "Avatar yangilandi", avatarUrl: selected.url });
+    res.json({ message: "Avatar yangilandi", avatarUrl });
   } catch (err) {
     res.status(500).json({ error: "Avatarni yangilashda xatolik", details: err.message });
   }
