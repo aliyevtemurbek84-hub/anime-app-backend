@@ -8,6 +8,7 @@ import listRoutes from "./routes/list.js";
 import aiRoutes from "./routes/ai.js";
 import statsRoutes from "./routes/stats.js";
 import watchpartyRoutes from "./routes/watchparty.js";
+import friendsRoutes from "./routes/friends.js";
 
 dotenv.config();
 
@@ -15,13 +16,13 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Route guruhlari
 app.use("/auth", authRoutes);
 app.use("/anime", animeRoutes);
 app.use("/user/list", listRoutes);
 app.use("/ai", aiRoutes);
 app.use("/user/stats", statsRoutes);
 app.use("/watchparty", watchpartyRoutes);
+app.use("/friends", friendsRoutes);
 
 app.get("/", (req, res) => {
   res.json({ status: "ok", message: "Anime App Backend ishlayapti" });
