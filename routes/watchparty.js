@@ -102,10 +102,10 @@ router.post("/:partyId/join", async (req, res) => {
 });
 
 // POST /watchparty/:partyId/messages
-// body: { userId, username, text }
+// body: { userId, username, text, isSpoiler }
 router.post("/:partyId/messages", async (req, res) => {
   try {
-    const { userId, username, text } = req.body;
+    const { userId, username, text, isSpoiler } = req.body;
     const { partyId } = req.params;
 
     if (!userId || !text || !text.trim()) {
@@ -117,6 +117,7 @@ router.post("/:partyId/messages", async (req, res) => {
       userId,
       username: username || "Foydalanuvchi",
       text: text.trim(),
+      isSpoiler: isSpoiler === true,
       createdAt: new Date().toISOString(),
     });
 

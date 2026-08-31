@@ -9,6 +9,7 @@ import aiRoutes from "./routes/ai.js";
 import statsRoutes from "./routes/stats.js";
 import watchpartyRoutes from "./routes/watchparty.js";
 import friendsRoutes from "./routes/friends.js";
+import profileRoutes from "./routes/profile.js";
 
 dotenv.config();
 
@@ -23,6 +24,7 @@ app.use("/ai", aiRoutes);
 app.use("/user/stats", statsRoutes);
 app.use("/watchparty", watchpartyRoutes);
 app.use("/friends", friendsRoutes);
+app.use("/profile", profileRoutes);
 
 app.get("/", (req, res) => {
   res.json({ status: "ok", message: "Anime App Backend ishlayapti" });
