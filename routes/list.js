@@ -82,6 +82,12 @@ const BADGE_DEFINITIONS = [
     description: "20-levelga yetdingiz",
     check: (stats) => stats.level >= 20,
   },
+  {
+    id: "critic_5",
+    name: "Tanqidchi",
+    description: "5 ta anime'ga baho/sharh qoldirdingiz",
+    check: (stats) => stats.reviewedCount >= 5,
+  },
 ];
 
 // Foydalanuvchi shartlarga mos badge'larni tekshirish va yangilarini qaytarish
@@ -95,8 +101,9 @@ async function checkAndAwardBadges(userId, userRef, currentBadges, level) {
   const totalAnime = allDocs.length;
   const completedCount = allDocs.filter((d) => d.status === "completed").length;
   const planCount = allDocs.filter((d) => d.status === "plan_to_watch").length;
+  const reviewedCount = allDocs.filter((d) => d.rating != null).length;
 
-  const stats = { totalAnime, completedCount, planCount, level };
+  const stats = { totalAnime, completedCount, planCount, reviewedCount, level };
   const existingBadgeIds = (currentBadges || []).map((b) =>
     typeof b === "string" ? b : b.id
   );
@@ -136,6 +143,7 @@ router.post("/add", async (req, res) => {
         animeImage: animeImage || null,
         progress: 0,
         rating: null,
+        reviewText: null,
         updatedAt: new Date().toISOString(),
       },
       { merge: true }
@@ -174,7 +182,6 @@ router.post("/add", async (req, res) => {
 });
 
 // PUT /user/list/status
-// body: { userId, animeId, status } - statusni o'zgartirish uchun (masalan completed'ga o'tkazish)
 router.put("/status", async (req, res) => {
   try {
     const { userId, animeId, status } = req.body;
@@ -199,6 +206,40 @@ router.put("/status", async (req, res) => {
     res.json({ message: "Status yangilandi", newBadges });
   } catch (err) {
     res.status(500).json({ error: "Statusni yangilashda xatolik", details: err.message });
+  }
+});
+
+// PUT /user/list/review
+// body: { userId, animeId, rating (1-10), reviewText (ixtiyoriy) }
+router.put("/review", async (req, res) => {
+  try {
+    const { userId, animeId, rating, reviewText } = req.body;
+
+    if (!userId || !animeId || rating == null) {
+      return res.status(400).json({ error: "userId, animeId va rating maydonlari kerak" });
+    }
+
+    if (rating < 1 || rating > 10) {
+      return res.status(400).json({ error: "rating 1 dan 10 gacha bo'lishi kerak" });
+    }
+
+    const docId = `${userId}_${animeId}`;
+    await db.collection("anime_lists").doc(docId).update({
+      rating,
+      reviewText: reviewText || null,
+      updatedAt: new Date().toISOString(),
+    });
+
+    const userRef = db.collection("users").doc(userId);
+    const userSnap = await userRef.get();
+    const currentBadges = userSnap.data()?.badges || [];
+    const currentLevel = userSnap.data()?.level || 1;
+
+    const newBadges = await checkAndAwardBadges(userId, userRef, currentBadges, currentLevel);
+
+    res.json({ message: "Baho saqlandi", newBadges });
+  } catch (err) {
+    res.status(500).json({ error: "Bahoni saqlashda xatolik", details: err.message });
   }
 });
 
