@@ -6,12 +6,41 @@ const router = express.Router();
 
 const FIREBASE_WEB_API_KEY = process.env.FIREBASE_WEB_API_KEY;
 
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 // POST /auth/register
 // body: { email, password, username }
 router.post("/register", async (req, res) => {
   try {
     const { email, password, username } = req.body;
-    const userRecord = await authAdmin.createUser({ email, password, displayName: username });
+
+    if (!email || !password || !username) {
+      return res
+        .status(400)
+        .json({ error: "email, password va username maydonlari kerak" });
+    }
+
+    if (!EMAIL_REGEX.test(email)) {
+      return res.status(400).json({ error: "Email formati noto'g'ri" });
+    }
+
+    if (password.length < 6) {
+      return res
+        .status(400)
+        .json({ error: "Parol kamida 6 belgidan iborat bo'lishi kerak" });
+    }
+
+    if (username.trim().length < 2) {
+      return res
+        .status(400)
+        .json({ error: "Foydalanuvchi nomi kamida 2 belgidan iborat bo'lishi kerak" });
+    }
+
+    const userRecord = await authAdmin.createUser({
+      email,
+      password,
+      displayName: username,
+    });
 
     // Foydalanuvchi profilini Firestore'da yaratish
     await db.collection("users").doc(userRecord.uid).set({
@@ -26,7 +55,11 @@ router.post("/register", async (req, res) => {
 
     res.json({ uid: userRecord.uid, message: "Ro'yxatdan o'tish muvaffaqiyatli" });
   } catch (err) {
-    res.status(400).json({ error: "Ro'yxatdan o'tishda xatolik", details: err.message });
+    let message = "Ro'yxatdan o'tishda xatolik";
+    if (err.code === "auth/email-already-exists") {
+      message = "Bu email bilan foydalanuvchi allaqachon ro'yxatdan o'tgan";
+    }
+    res.status(400).json({ error: message, details: err.message });
   }
 });
 
@@ -35,8 +68,13 @@ router.post("/register", async (req, res) => {
 router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
+
     if (!email || !password) {
       return res.status(400).json({ error: "email va password kerak" });
+    }
+
+    if (!EMAIL_REGEX.test(email)) {
+      return res.status(400).json({ error: "Email formati noto'g'ri" });
     }
 
     // Firebase Auth REST API orqali parolni tekshirish
