@@ -9,17 +9,56 @@ const ANILIST_URL = "https://graphql.anilist.co";
 // Mashhur anime personajlari - shulardan avatar tanlanadi
 const CHARACTER_NAMES = [
   "Naruto Uzumaki",
+  "Sasuke Uchiha",
   "Monkey D. Luffy",
+  "Roronoa Zoro",
   "Son Goku",
+  "Vegeta",
   "Itachi Uchiha",
-  "Levi Ackerman",
+  "Kakashi Hatake",
+  "Levi",
   "Mikasa Ackerman",
+  "Eren Yeager",
+  "Armin Arlert",
   "Satoru Gojo",
+  "Yuji Itadori",
+  "Megumi Fushiguro",
   "Tanjiro Kamado",
   "Nezuko Kamado",
-  "Light Yagami",
-  "Edward Elric",
   "Zenitsu Agatsuma",
+  "Inosuke Hashibira",
+  "Light Yagami",
+  "L Lawliet",
+  "Edward Elric",
+  "Alphonse Elric",
+  "Izuku Midoriya",
+  "Katsuki Bakugo",
+  "Shoto Todoroki",
+  "Ichigo Kurosaki",
+  "Rukia Kuchiki",
+  "Natsu Dragneel",
+  "Lucy Heartfilia",
+  "Killua Zoldyck",
+  "Gon Freecss",
+  "Saitama",
+  "Genos",
+  "Rimuru Tempest",
+  "Ainz Ooal Gown",
+  "Kirito",
+  "Asuna Yuuki",
+  "Rem",
+  "Emilia",
+  "Violet Evergarden",
+  "Chika Fujiwara",
+  "Kaguya Shinomiya",
+  "Miyuki Shirogane",
+  "Anya Forger",
+  "Loid Forger",
+  "Yor Forger",
+  "Power",
+  "Denji",
+  "Makima",
+  "Shigeo Kageyama",
 ];
 
 // Natijalarni serverda vaqtincha eslab qolish (har so'rovda AniList'ga
@@ -57,8 +96,9 @@ async function getAvatarList() {
       if (url) {
         results.push({ id: `avatar_${i + 1}`, name: CHARACTER_NAMES[i], url });
       }
+      await new Promise((r) => setTimeout(r, 150));
     } catch (e) {
-      // Agar bironta personaj topilmasa, shunchaki o'tkazib yuboramiz
+      // Agar bironta personaj topilmasa yoki xato bo'lsa, o'tkazib yuboramiz
     }
   }
 
