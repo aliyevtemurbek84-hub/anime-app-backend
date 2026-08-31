@@ -15,17 +15,9 @@ router.get("/search", async (req, res) => {
   }
 });
 
-// GET /anime/:id
-router.get("/:id", async (req, res) => {
-  try {
-    const anime = await getAnimeById(req.params.id);
-    res.json(anime);
-  } catch (err) {
-    res.status(500).json({ error: "Anime topilmadi", details: err.message });
-  }
-});
-
 // GET /anime/genre/:genreId
+// MUHIM: bu route /anime/:id'dan OLDIN turishi kerak, aks holda "genre" so'zi
+// noto'g'ri ravishda :id sifatida qabul qilinadi
 // Eslatma: AniList janr nomi bilan ishlaydi (masalan "Action"), raqam bilan emas
 router.get("/genre/:genreId", async (req, res) => {
   try {
@@ -34,6 +26,16 @@ router.get("/genre/:genreId", async (req, res) => {
     res.json(results);
   } catch (err) {
     res.status(500).json({ error: "Janr bo'yicha qidirishda xatolik", details: err.message });
+  }
+});
+
+// GET /anime/:id
+router.get("/:id", async (req, res) => {
+  try {
+    const anime = await getAnimeById(req.params.id);
+    res.json(anime);
+  } catch (err) {
+    res.status(500).json({ error: "Anime topilmadi", details: err.message });
   }
 });
 
