@@ -124,8 +124,6 @@ router.put("/fcm-token", async (req, res) => {
 // GET /auth/user/:uid
 router.get("/user/:uid", async (req, res) => {
 
-// GET /auth/user/:uid
-router.get("/user/:uid", async (req, res) => {
   try {
     const doc = await db.collection("users").doc(req.params.uid).get();
     if (!doc.exists) return res.status(404).json({ error: "Foydalanuvchi topilmadi" });
