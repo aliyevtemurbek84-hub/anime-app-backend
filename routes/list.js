@@ -1,5 +1,6 @@
 import express from "express";
 import { db } from "../config/firebase.js";
+import { sendNotification } from "../services/notificationService.js";
 
 const router = express.Router();
 
@@ -169,6 +170,21 @@ router.post("/add", async (req, res) => {
       levelInfo.badges,
       levelInfo.level
     );
+
+    // Do'stlarga faoliyat haqida xabar berish (faqat yangi qo'shilganda, status o'zgarishida emas)
+    const userSnapForFriends = await userRef.get();
+    const friendIds = userSnapForFriends.data()?.friendsList || [];
+    const actorUsername = userSnapForFriends.data()?.username || "Do'stingiz";
+
+    for (const friendId of friendIds) {
+      sendNotification({
+        userId: friendId,
+        title: "Do'stingiz faol!",
+        body: `${actorUsername} "${animeTitle || 'anime'}"ni ro'yxatiga qo'shdi`,
+        type: "friend_activity",
+        data: { animeId },
+      });
+    }
 
     res.json({
       message: "Ro'yxatga qo'shildi",
