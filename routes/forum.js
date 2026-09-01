@@ -1,5 +1,6 @@
 import express from "express";
 import { db } from "../config/firebase.js";
+import { sendNotification } from "../services/notificationService.js";
 
 const router = express.Router();
 
@@ -86,6 +87,18 @@ router.post("/post/:postId/like", async (req, res) => {
 
     await postRef.update({ likes: updatedLikes });
 
+    // Faqat yangi like bosilganda va post egasi boshqa odam bo'lsa xabar yuborish
+    const postOwnerId = postDoc.data().userId;
+    if (!alreadyLiked && postOwnerId && postOwnerId !== userId) {
+      sendNotification({
+        userId: postOwnerId,
+        title: "Yangi like!",
+        body: `Postingizga like bosishdi`,
+        type: "forum_like",
+        data: { postId },
+      });
+    }
+
     res.json({
       message: alreadyLiked ? "Like olib tashlandi" : "Like bosildi",
       likes: updatedLikes,
@@ -124,6 +137,18 @@ router.post("/post/:postId/comment", async (req, res) => {
 
     const currentCount = postDoc.data().commentCount || 0;
     await postRef.update({ commentCount: currentCount + 1 });
+
+    // Post egasi boshqa odam bo'lsa xabar yuborish
+    const postOwnerId = postDoc.data().userId;
+    if (postOwnerId && postOwnerId !== userId) {
+      sendNotification({
+        userId: postOwnerId,
+        title: "Yangi izoh!",
+        body: `${username || "Foydalanuvchi"} postingizga izoh qoldirdi`,
+        type: "forum_comment",
+        data: { postId },
+      });
+    }
 
     res.json({ message: "Izoh qo'shildi" });
   } catch (err) {

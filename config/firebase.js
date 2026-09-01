@@ -24,3 +24,4 @@ admin.initializeApp({
 export const db = admin.firestore();
 export const authAdmin = admin.auth();
 export const FieldValue = admin.firestore.FieldValue;
+export const messaging = admin.messaging();
