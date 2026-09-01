@@ -105,6 +105,25 @@ router.post("/login", async (req, res) => {
   }
 });
 
+// PUT /auth/fcm-token
+// body: { userId, fcmToken }
+router.put("/fcm-token", async (req, res) => {
+  const { userId, fcmToken } = req.body;
+  if (!userId || !fcmToken) {
+    return res.status(400).json({ error: "userId va fcmToken talab qilinadi" });
+  }
+  try {
+    await db.collection("users").doc(userId).update({ fcmToken });
+    res.json({ success: true });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Tokenni saqlashda xatolik" });
+  }
+});
+
+// GET /auth/user/:uid
+router.get("/user/:uid", async (req, res) => {
+
 // GET /auth/user/:uid
 router.get("/user/:uid", async (req, res) => {
   try {
