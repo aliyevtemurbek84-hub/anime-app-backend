@@ -32,6 +32,7 @@ router.post("/create", async (req, res) => {
       scheduledTime,
       description: description || null,
       participants: [{ userId: hostUserId, username: hostUsername || "Foydalanuvchi" }],
+      reminderSent: false,
       createdAt: new Date().toISOString(),
     });
 

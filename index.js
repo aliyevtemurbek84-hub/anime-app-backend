@@ -36,7 +36,10 @@ app.get("/", (req, res) => {
   res.json({ status: "ok", message: "Anime App Backend ishlayapti" });
 });
 
+import { startWatchPartyReminderJob } from "./services/watchPartyReminder.js";
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server ${PORT}-portda ishga tushdi`);
+  startWatchPartyReminderJob();
 });
