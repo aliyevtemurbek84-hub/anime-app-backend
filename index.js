@@ -12,6 +12,7 @@ import friendsRoutes from "./routes/friends.js";
 import profileRoutes from "./routes/profile.js";
 import calendarRoutes from "./routes/calendar.js";
 import forumRoutes from "./routes/forum.js";
+import moodRoutes from "./routes/mood.js";
 
 dotenv.config();
 
@@ -29,6 +30,7 @@ app.use("/friends", friendsRoutes);
 app.use("/profile", profileRoutes);
 app.use("/user/calendar", calendarRoutes);
 app.use("/forum", forumRoutes);
+app.use("/anime", moodRoutes);
 
 app.get("/", (req, res) => {
   res.json({ status: "ok", message: "Anime App Backend ishlayapti" });
