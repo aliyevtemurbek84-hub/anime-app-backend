@@ -12,6 +12,7 @@ import friendsRoutes from "./routes/friends.js";
 import profileRoutes from "./routes/profile.js";
 import calendarRoutes from "./routes/calendar.js";
 import forumRoutes from "./routes/forum.js";
+import invitesRoutes from "./routes/invites.js";
 import moodRoutes from "./routes/mood.js";
 
 dotenv.config();
@@ -30,6 +31,7 @@ app.use("/friends", friendsRoutes);
 app.use("/profile", profileRoutes);
 app.use("/user/calendar", calendarRoutes);
 app.use("/forum", forumRoutes);
+app.use("/invites", invitesRoutes);
 app.use("/anime", moodRoutes);
 
 app.get("/", (req, res) => {
@@ -37,9 +39,11 @@ app.get("/", (req, res) => {
 });
 
 import { startWatchPartyReminderJob } from "./services/watchPartyReminder.js";
+import { startEpisodeReminderJob } from "./services/episodeReminder.js";
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server ${PORT}-portda ishga tushdi`);
   startWatchPartyReminderJob();
+  startEpisodeReminderJob();
 });
