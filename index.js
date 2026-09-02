@@ -13,6 +13,7 @@ import profileRoutes from "./routes/profile.js";
 import calendarRoutes from "./routes/calendar.js";
 import forumRoutes from "./routes/forum.js";
 import invitesRoutes from "./routes/invites.js";
+import reelsRoutes from "./routes/reels.js";
 import moodRoutes from "./routes/mood.js";
 
 dotenv.config();
@@ -32,6 +33,7 @@ app.use("/profile", profileRoutes);
 app.use("/user/calendar", calendarRoutes);
 app.use("/forum", forumRoutes);
 app.use("/invites", invitesRoutes);
+app.use("/reels", reelsRoutes);
 app.use("/anime", moodRoutes);
 
 app.get("/", (req, res) => {
