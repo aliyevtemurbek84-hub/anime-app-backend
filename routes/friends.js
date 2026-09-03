@@ -1,5 +1,6 @@
 import express from "express";
 import { db } from "../config/firebase.js";
+import { validateId, validateText } from "../services/utils/validate.js";
 
 const router = express.Router();
 
@@ -8,13 +9,16 @@ const router = express.Router();
 router.post("/add", async (req, res) => {
   try {
     const { userId, friendUsername } = req.body;
-    if (!userId || !friendUsername) {
-      return res.status(400).json({ error: "userId va friendUsername kerak" });
-    }
+
+    const userIdCheck = validateId(userId, { fieldName: "userId" });
+    if (!userIdCheck.valid) return res.status(400).json({ error: userIdCheck.error });
+
+    const friendUsernameCheck = validateText(friendUsername, { fieldName: "friendUsername", maxLength: 50 });
+    if (!friendUsernameCheck.valid) return res.status(400).json({ error: friendUsernameCheck.error });
 
     const snapshot = await db
       .collection("users")
-      .where("username", "==", friendUsername)
+      .where("username", "==", friendUsernameCheck.value)
       .limit(1)
       .get();
 

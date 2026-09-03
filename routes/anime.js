@@ -7,8 +7,9 @@ const router = express.Router();
 router.get("/search", async (req, res) => {
   try {
     const { q } = req.query;
-    if (!q) return res.status(400).json({ error: "Qidiruv so'zi kerak (q parametri)" });
-    const results = await searchAnime(q);
+    const trimmedQ = (q || "").trim();
+    if (!trimmedQ) return res.status(400).json({ error: "Qidiruv so'zi kerak (q parametri)" });
+    const results = await searchAnime(trimmedQ);
     res.json(results);
   } catch (err) {
     res.status(500).json({ error: "Anime qidirishda xatolik", details: err.message });

@@ -1,5 +1,6 @@
 import express from "express";
 import { db } from "../config/firebase.js";
+import { validateId, validateText, validateOptionalText, validateUrl } from "../services/utils/validate.js";
 
 const router = express.Router();
 
@@ -92,17 +93,23 @@ router.post("/add", async (req, res) => {
   try {
     const { userId, username, animeTitle, imageUrl } = req.body;
 
-    if (!userId || !animeTitle || !imageUrl) {
-      return res.status(400).json({
-        error: "userId, animeTitle va imageUrl maydonlari kerak",
-      });
-    }
+    const userIdCheck = validateId(userId, { fieldName: "userId" });
+    if (!userIdCheck.valid) return res.status(400).json({ error: userIdCheck.error });
+
+    const animeTitleCheck = validateText(animeTitle, { fieldName: "animeTitle", maxLength: 200 });
+    if (!animeTitleCheck.valid) return res.status(400).json({ error: animeTitleCheck.error });
+
+    const imageCheck = validateUrl(imageUrl, { fieldName: "imageUrl" });
+    if (!imageCheck.valid) return res.status(400).json({ error: imageCheck.error });
+
+    const usernameCheck = validateOptionalText(username, { fieldName: "username", maxLength: 50 });
+    if (!usernameCheck.valid) return res.status(400).json({ error: usernameCheck.error });
 
     const wallpaperRef = await db.collection("wallpapers").add({
       userId,
-      username: username || "Foydalanuvchi",
-      animeTitle: animeTitle.trim(),
-      imageUrl: imageUrl.trim(),
+      username: usernameCheck.value || "Foydalanuvchi",
+      animeTitle: animeTitleCheck.value,
+      imageUrl: imageCheck.value,
       likes: [],
       createdAt: new Date().toISOString(),
     });
@@ -131,9 +138,8 @@ router.post("/:wallpaperId/like", async (req, res) => {
     const { userId } = req.body;
     const { wallpaperId } = req.params;
 
-    if (!userId) {
-      return res.status(400).json({ error: "userId kerak" });
-    }
+    const userIdCheck = validateId(userId, { fieldName: "userId" });
+    if (!userIdCheck.valid) return res.status(400).json({ error: userIdCheck.error });
 
     const wpRef = db.collection("wallpapers").doc(wallpaperId);
     const wpDoc = await wpRef.get();

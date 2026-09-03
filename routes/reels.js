@@ -1,6 +1,7 @@
 import express from "express";
 import { db } from "../config/firebase.js";
 import { sendNotification } from "../services/notificationService.js";
+import { validateId, validateText, validateOptionalText, validateOptionalUrl } from "../services/utils/validate.js";
 
 const router = express.Router();
 
@@ -10,16 +11,27 @@ router.post("/create", async (req, res) => {
   try {
     const { userId, username, text, linkUrl, imageUrl } = req.body;
 
-    if (!userId || !text || !text.trim()) {
-      return res.status(400).json({ error: "userId va text maydonlari kerak" });
-    }
+    const userIdCheck = validateId(userId, { fieldName: "userId" });
+    if (!userIdCheck.valid) return res.status(400).json({ error: userIdCheck.error });
+
+    const textCheck = validateText(text, { fieldName: "text", maxLength: 500 });
+    if (!textCheck.valid) return res.status(400).json({ error: textCheck.error });
+
+    const usernameCheck = validateOptionalText(username, { fieldName: "username", maxLength: 50 });
+    if (!usernameCheck.valid) return res.status(400).json({ error: usernameCheck.error });
+
+    const linkCheck = validateOptionalUrl(linkUrl, { fieldName: "linkUrl" });
+    if (!linkCheck.valid) return res.status(400).json({ error: linkCheck.error });
+
+    const imageCheck = validateOptionalUrl(imageUrl, { fieldName: "imageUrl" });
+    if (!imageCheck.valid) return res.status(400).json({ error: imageCheck.error });
 
     const reelRef = await db.collection("reels").add({
       userId,
-      username: username || "Foydalanuvchi",
-      text: text.trim(),
-      linkUrl: linkUrl || null,
-      imageUrl: imageUrl || null,
+      username: usernameCheck.value || "Foydalanuvchi",
+      text: textCheck.value,
+      linkUrl: linkCheck.value,
+      imageUrl: imageCheck.value,
       likes: [],
       createdAt: new Date().toISOString(),
     });
@@ -52,9 +64,8 @@ router.post("/:reelId/like", async (req, res) => {
     const { userId } = req.body;
     const { reelId } = req.params;
 
-    if (!userId) {
-      return res.status(400).json({ error: "userId kerak" });
-    }
+    const userIdCheck = validateId(userId, { fieldName: "userId" });
+    if (!userIdCheck.valid) return res.status(400).json({ error: userIdCheck.error });
 
     const reelRef = db.collection("reels").doc(reelId);
     const reelDoc = await reelRef.get();

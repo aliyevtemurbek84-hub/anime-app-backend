@@ -1,6 +1,7 @@
 import express from "express";
 import { db } from "../config/firebase.js";
 import { sendNotification } from "../services/notificationService.js";
+import { validateId, validateText, validateOptionalText } from "../services/utils/validate.js";
 
 const router = express.Router();
 
@@ -13,21 +14,24 @@ router.post("/post", async (req, res) => {
   try {
     const { userId, username, category, text } = req.body;
 
-    if (!userId || !category || !text || !text.trim()) {
-      return res
-        .status(400)
-        .json({ error: "userId, category va text maydonlari kerak" });
-    }
+    const userIdCheck = validateId(userId, { fieldName: "userId" });
+    if (!userIdCheck.valid) return res.status(400).json({ error: userIdCheck.error });
 
     if (!CATEGORIES.includes(category)) {
       return res.status(400).json({ error: "Noto'g'ri kategoriya" });
     }
 
+    const textCheck = validateText(text, { fieldName: "text", maxLength: 2000 });
+    if (!textCheck.valid) return res.status(400).json({ error: textCheck.error });
+
+    const usernameCheck = validateOptionalText(username, { fieldName: "username", maxLength: 50 });
+    if (!usernameCheck.valid) return res.status(400).json({ error: usernameCheck.error });
+
     const postRef = await db.collection("forum_posts").add({
       userId,
-      username: username || "Foydalanuvchi",
+      username: usernameCheck.value || "Foydalanuvchi",
       category,
-      text: text.trim(),
+      text: textCheck.value,
       likes: [],
       commentCount: 0,
       createdAt: new Date().toISOString(),
@@ -67,9 +71,8 @@ router.post("/post/:postId/like", async (req, res) => {
     const { userId } = req.body;
     const { postId } = req.params;
 
-    if (!userId) {
-      return res.status(400).json({ error: "userId kerak" });
-    }
+    const userIdCheck = validateId(userId, { fieldName: "userId" });
+    if (!userIdCheck.valid) return res.status(400).json({ error: userIdCheck.error });
 
     const postRef = db.collection("forum_posts").doc(postId);
     const postDoc = await postRef.get();
@@ -116,9 +119,14 @@ router.post("/post/:postId/comment", async (req, res) => {
     const { userId, username, text } = req.body;
     const { postId } = req.params;
 
-    if (!userId || !text || !text.trim()) {
-      return res.status(400).json({ error: "userId va text kerak" });
-    }
+    const userIdCheck = validateId(userId, { fieldName: "userId" });
+    if (!userIdCheck.valid) return res.status(400).json({ error: userIdCheck.error });
+
+    const textCheck = validateText(text, { fieldName: "text", maxLength: 1000 });
+    if (!textCheck.valid) return res.status(400).json({ error: textCheck.error });
+
+    const usernameCheck = validateOptionalText(username, { fieldName: "username", maxLength: 50 });
+    if (!usernameCheck.valid) return res.status(400).json({ error: usernameCheck.error });
 
     const postRef = db.collection("forum_posts").doc(postId);
     const postDoc = await postRef.get();
@@ -130,8 +138,8 @@ router.post("/post/:postId/comment", async (req, res) => {
     await db.collection("forum_comments").add({
       postId,
       userId,
-      username: username || "Foydalanuvchi",
-      text: text.trim(),
+      username: usernameCheck.value || "Foydalanuvchi",
+      text: textCheck.value,
       createdAt: new Date().toISOString(),
     });
 

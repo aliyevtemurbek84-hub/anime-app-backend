@@ -1,6 +1,7 @@
 import express from "express";
 import { db } from "../config/firebase.js";
 import axios from "axios";
+import { validateId, validateUrl } from "../services/utils/validate.js";
 
 const router = express.Router();
 
@@ -123,9 +124,14 @@ router.put("/avatar", async (req, res) => {
   try {
     const { userId, avatarId, avatarUrl } = req.body;
 
-    if (!userId || !avatarId || !avatarUrl) {
-      return res.status(400).json({ error: "userId, avatarId va avatarUrl kerak" });
-    }
+    const userIdCheck = validateId(userId, { fieldName: "userId" });
+    if (!userIdCheck.valid) return res.status(400).json({ error: userIdCheck.error });
+
+    const avatarIdCheck = validateId(avatarId, { fieldName: "avatarId" });
+    if (!avatarIdCheck.valid) return res.status(400).json({ error: avatarIdCheck.error });
+
+    const avatarUrlCheck = validateUrl(avatarUrl, { fieldName: "avatarUrl" });
+    if (!avatarUrlCheck.valid) return res.status(400).json({ error: avatarUrlCheck.error });
 
     await db.collection("users").doc(userId).update({
       avatarUrl,

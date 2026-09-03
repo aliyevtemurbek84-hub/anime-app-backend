@@ -1,5 +1,6 @@
 import express from "express";
 import { db } from "../config/firebase.js";
+import { validateId, validateText, validateOptionalText, validateOptionalUrl } from "../services/utils/validate.js";
 
 const router = express.Router();
 
@@ -10,24 +11,36 @@ router.post("/add", async (req, res) => {
   try {
     const { userId, username, songTitle, artist, animeTitle, type, linkUrl } = req.body;
 
-    if (!userId || !songTitle || !animeTitle || !type) {
-      return res.status(400).json({
-        error: "userId, songTitle, animeTitle va type maydonlari kerak",
-      });
-    }
+    const userIdCheck = validateId(userId, { fieldName: "userId" });
+    if (!userIdCheck.valid) return res.status(400).json({ error: userIdCheck.error });
+
+    const songTitleCheck = validateText(songTitle, { fieldName: "songTitle", maxLength: 200 });
+    if (!songTitleCheck.valid) return res.status(400).json({ error: songTitleCheck.error });
+
+    const animeTitleCheck = validateText(animeTitle, { fieldName: "animeTitle", maxLength: 200 });
+    if (!animeTitleCheck.valid) return res.status(400).json({ error: animeTitleCheck.error });
 
     if (type !== "OP" && type !== "ED") {
       return res.status(400).json({ error: "type faqat OP yoki ED bo'lishi kerak" });
     }
 
+    const artistCheck = validateOptionalText(artist, { fieldName: "artist", maxLength: 150 });
+    if (!artistCheck.valid) return res.status(400).json({ error: artistCheck.error });
+
+    const usernameCheck = validateOptionalText(username, { fieldName: "username", maxLength: 50 });
+    if (!usernameCheck.valid) return res.status(400).json({ error: usernameCheck.error });
+
+    const linkCheck = validateOptionalUrl(linkUrl, { fieldName: "linkUrl" });
+    if (!linkCheck.valid) return res.status(400).json({ error: linkCheck.error });
+
     const musicRef = await db.collection("music").add({
       userId,
-      username: username || "Foydalanuvchi",
-      songTitle: songTitle.trim(),
-      artist: artist || null,
-      animeTitle: animeTitle.trim(),
+      username: usernameCheck.value || "Foydalanuvchi",
+      songTitle: songTitleCheck.value,
+      artist: artistCheck.value,
+      animeTitle: animeTitleCheck.value,
       type,
-      linkUrl: linkUrl || null,
+      linkUrl: linkCheck.value,
       likes: [],
       createdAt: new Date().toISOString(),
     });
@@ -57,9 +70,8 @@ router.post("/:musicId/like", async (req, res) => {
     const { userId } = req.body;
     const { musicId } = req.params;
 
-    if (!userId) {
-      return res.status(400).json({ error: "userId kerak" });
-    }
+    const userIdCheck = validateId(userId, { fieldName: "userId" });
+    if (!userIdCheck.valid) return res.status(400).json({ error: userIdCheck.error });
 
     const musicRef = db.collection("music").doc(musicId);
     const musicDoc = await musicRef.get();

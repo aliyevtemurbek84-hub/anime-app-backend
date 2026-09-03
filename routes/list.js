@@ -1,6 +1,9 @@
 import express from "express";
 import { db } from "../config/firebase.js";
 import { sendNotification } from "../services/notificationService.js";
+import { validateId, validateOptionalText } from "../services/utils/validate.js";
+
+const ALLOWED_STATUSES = ["watching", "completed", "plan_to_watch", "dropped"];
 
 const router = express.Router();
 
@@ -129,9 +132,21 @@ router.post("/add", async (req, res) => {
   try {
     const { userId, animeId, status, animeTitle, animeImage } = req.body;
 
-    if (!userId || !animeId || !status) {
-      return res.status(400).json({ error: "userId, animeId va status maydonlari kerak" });
+    const userIdCheck = validateId(userId, { fieldName: "userId" });
+    if (!userIdCheck.valid) return res.status(400).json({ error: userIdCheck.error });
+
+    if (animeId == null || Number.isNaN(Number(animeId))) {
+      return res.status(400).json({ error: "animeId to'g'ri raqam bo'lishi kerak" });
     }
+
+    if (!ALLOWED_STATUSES.includes(status)) {
+      return res.status(400).json({
+        error: `status quyidagilardan biri bo'lishi kerak: ${ALLOWED_STATUSES.join(", ")}`,
+      });
+    }
+
+    const animeTitleCheck = validateOptionalText(animeTitle, { fieldName: "animeTitle", maxLength: 300 });
+    if (!animeTitleCheck.valid) return res.status(400).json({ error: animeTitleCheck.error });
 
     const docId = `${userId}_${animeId}`;
 
@@ -202,8 +217,17 @@ router.put("/status", async (req, res) => {
   try {
     const { userId, animeId, status } = req.body;
 
-    if (!userId || !animeId || !status) {
-      return res.status(400).json({ error: "userId, animeId va status maydonlari kerak" });
+    const userIdCheck = validateId(userId, { fieldName: "userId" });
+    if (!userIdCheck.valid) return res.status(400).json({ error: userIdCheck.error });
+
+    if (animeId == null || Number.isNaN(Number(animeId))) {
+      return res.status(400).json({ error: "animeId to'g'ri raqam bo'lishi kerak" });
+    }
+
+    if (!ALLOWED_STATUSES.includes(status)) {
+      return res.status(400).json({
+        error: `status quyidagilardan biri bo'lishi kerak: ${ALLOWED_STATUSES.join(", ")}`,
+      });
     }
 
     const docId = `${userId}_${animeId}`;
@@ -231,18 +255,25 @@ router.put("/review", async (req, res) => {
   try {
     const { userId, animeId, rating, reviewText } = req.body;
 
-    if (!userId || !animeId || rating == null) {
-      return res.status(400).json({ error: "userId, animeId va rating maydonlari kerak" });
+    const userIdCheck = validateId(userId, { fieldName: "userId" });
+    if (!userIdCheck.valid) return res.status(400).json({ error: userIdCheck.error });
+
+    if (animeId == null || Number.isNaN(Number(animeId))) {
+      return res.status(400).json({ error: "animeId to'g'ri raqam bo'lishi kerak" });
     }
 
-    if (rating < 1 || rating > 10) {
-      return res.status(400).json({ error: "rating 1 dan 10 gacha bo'lishi kerak" });
+    const ratingNum = Number(rating);
+    if (rating == null || Number.isNaN(ratingNum) || ratingNum < 1 || ratingNum > 10) {
+      return res.status(400).json({ error: "rating 1 dan 10 gacha bo'lgan raqam bo'lishi kerak" });
     }
+
+    const reviewTextCheck = validateOptionalText(reviewText, { fieldName: "reviewText", maxLength: 1000 });
+    if (!reviewTextCheck.valid) return res.status(400).json({ error: reviewTextCheck.error });
 
     const docId = `${userId}_${animeId}`;
     await db.collection("anime_lists").doc(docId).update({
-      rating,
-      reviewText: reviewText || null,
+      rating: ratingNum,
+      reviewText: reviewTextCheck.value,
       updatedAt: new Date().toISOString(),
     });
 

@@ -1,5 +1,6 @@
 import express from "express";
 import { db } from "../config/firebase.js";
+import { validateId, validateText, validateOptionalText } from "../services/utils/validate.js";
 
 const router = express.Router();
 
@@ -17,21 +18,35 @@ router.post("/create", async (req, res) => {
       description,
     } = req.body;
 
-    if (!hostUserId || !animeId || !scheduledTime) {
-      return res.status(400).json({
-        error: "hostUserId, animeId va scheduledTime maydonlari kerak",
-      });
+    const hostUserIdCheck = validateId(hostUserId, { fieldName: "hostUserId" });
+    if (!hostUserIdCheck.valid) return res.status(400).json({ error: hostUserIdCheck.error });
+
+    if (animeId == null || Number.isNaN(Number(animeId))) {
+      return res.status(400).json({ error: "animeId to'g'ri raqam bo'lishi kerak" });
     }
+
+    const scheduledDate = new Date(scheduledTime);
+    if (!scheduledTime || Number.isNaN(scheduledDate.getTime())) {
+      return res.status(400).json({ error: "scheduledTime to'g'ri sana bo'lishi kerak" });
+    }
+
+    const hostUsernameCheck = validateOptionalText(hostUsername, { fieldName: "hostUsername", maxLength: 50 });
+    if (!hostUsernameCheck.valid) return res.status(400).json({ error: hostUsernameCheck.error });
+
+    const descriptionCheck = validateOptionalText(description, { fieldName: "description", maxLength: 500 });
+    if (!descriptionCheck.valid) return res.status(400).json({ error: descriptionCheck.error });
+
+    const resolvedHostUsername = hostUsernameCheck.value || "Foydalanuvchi";
 
     const partyRef = await db.collection("watch_parties").add({
       hostUserId,
-      hostUsername: hostUsername || "Foydalanuvchi",
+      hostUsername: resolvedHostUsername,
       animeId,
       animeTitle: animeTitle || null,
       animeImage: animeImage || null,
       scheduledTime,
-      description: description || null,
-      participants: [{ userId: hostUserId, username: hostUsername || "Foydalanuvchi" }],
+      description: descriptionCheck.value,
+      participants: [{ userId: hostUserId, username: resolvedHostUsername }],
       reminderSent: false,
       createdAt: new Date().toISOString(),
     });
@@ -77,9 +92,8 @@ router.post("/:partyId/join", async (req, res) => {
     const { userId, username } = req.body;
     const { partyId } = req.params;
 
-    if (!userId) {
-      return res.status(400).json({ error: "userId kerak" });
-    }
+    const userIdCheck = validateId(userId, { fieldName: "userId" });
+    if (!userIdCheck.valid) return res.status(400).json({ error: userIdCheck.error });
 
     const partyRef = db.collection("watch_parties").doc(partyId);
     const partyDoc = await partyRef.get();
@@ -109,15 +123,20 @@ router.post("/:partyId/messages", async (req, res) => {
     const { userId, username, text, isSpoiler } = req.body;
     const { partyId } = req.params;
 
-    if (!userId || !text || !text.trim()) {
-      return res.status(400).json({ error: "userId va text kerak" });
-    }
+    const userIdCheck = validateId(userId, { fieldName: "userId" });
+    if (!userIdCheck.valid) return res.status(400).json({ error: userIdCheck.error });
+
+    const textCheck = validateText(text, { fieldName: "text", maxLength: 1000 });
+    if (!textCheck.valid) return res.status(400).json({ error: textCheck.error });
+
+    const usernameCheck = validateOptionalText(username, { fieldName: "username", maxLength: 50 });
+    if (!usernameCheck.valid) return res.status(400).json({ error: usernameCheck.error });
 
     await db.collection("watch_party_messages").add({
       partyId,
       userId,
-      username: username || "Foydalanuvchi",
-      text: text.trim(),
+      username: usernameCheck.value || "Foydalanuvchi",
+      text: textCheck.value,
       isSpoiler: isSpoiler === true,
       createdAt: new Date().toISOString(),
     });

@@ -1,6 +1,7 @@
 import express from "express";
 import { db } from "../config/firebase.js";
 import { sendNotification } from "../services/notificationService.js";
+import { validateId, validateOptionalText } from "../services/utils/validate.js";
 
 const router = express.Router();
 
@@ -10,13 +11,22 @@ router.post("/send", async (req, res) => {
   try {
     const { fromUserId, fromUsername, toUserId, animeId, animeTitle, animeImage } = req.body;
 
-    if (!fromUserId || !toUserId || !animeId) {
-      return res.status(400).json({ error: "fromUserId, toUserId va animeId kerak" });
+    const fromCheck = validateId(fromUserId, { fieldName: "fromUserId" });
+    if (!fromCheck.valid) return res.status(400).json({ error: fromCheck.error });
+
+    const toCheck = validateId(toUserId, { fieldName: "toUserId" });
+    if (!toCheck.valid) return res.status(400).json({ error: toCheck.error });
+
+    if (animeId == null || Number.isNaN(Number(animeId))) {
+      return res.status(400).json({ error: "animeId to'g'ri raqam bo'lishi kerak" });
     }
 
     if (fromUserId === toUserId) {
       return res.status(400).json({ error: "O'zingizga taklif yubora olmaysiz" });
     }
+
+    const fromUsernameCheck = validateOptionalText(fromUsername, { fieldName: "fromUsername", maxLength: 50 });
+    if (!fromUsernameCheck.valid) return res.status(400).json({ error: fromUsernameCheck.error });
 
     const inviteRef = await db.collection("watch_invites").add({
       fromUserId,
