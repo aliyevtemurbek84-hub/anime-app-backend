@@ -15,6 +15,7 @@ import forumRoutes from "./routes/forum.js";
 import invitesRoutes from "./routes/invites.js";
 import reelsRoutes from "./routes/reels.js";
 import moodRoutes from "./routes/mood.js";
+import musicRoutes from "./routes/music.js";
 
 dotenv.config();
 
@@ -35,6 +36,7 @@ app.use("/forum", forumRoutes);
 app.use("/invites", invitesRoutes);
 app.use("/reels", reelsRoutes);
 app.use("/anime", moodRoutes);
+app.use("/music", musicRoutes);
 
 app.get("/", (req, res) => {
   res.json({ status: "ok", message: "Anime App Backend ishlayapti" });
