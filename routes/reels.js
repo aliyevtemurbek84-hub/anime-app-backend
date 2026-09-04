@@ -2,12 +2,13 @@ import express from "express";
 import { db } from "../config/firebase.js";
 import { sendNotification } from "../services/notificationService.js";
 import { validateId, validateText, validateOptionalText, validateOptionalUrl } from "../services/utils/validate.js";
+import { rateLimiter, checkBannedWords } from "../services/utils/moderation.js";
 
 const router = express.Router();
 
 // POST /reels/create
 // body: { userId, username, text, linkUrl, imageUrl }
-router.post("/create", async (req, res) => {
+router.post("/create", rateLimiter("reel_create", 3, 60), async (req, res) => {
   try {
     const { userId, username, text, linkUrl, imageUrl } = req.body;
 
@@ -16,6 +17,11 @@ router.post("/create", async (req, res) => {
 
     const textCheck = validateText(text, { fieldName: "text", maxLength: 500 });
     if (!textCheck.valid) return res.status(400).json({ error: textCheck.error });
+
+    const bannedCheck = checkBannedWords(textCheck.value);
+    if (!bannedCheck.clean) {
+      return res.status(400).json({ error: "Matnda nomaqbul so'z aniqlandi" });
+    }
 
     const usernameCheck = validateOptionalText(username, { fieldName: "username", maxLength: 50 });
     if (!usernameCheck.valid) return res.status(400).json({ error: usernameCheck.error });
