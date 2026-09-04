@@ -2,6 +2,7 @@ import express from "express";
 import { db } from "../config/firebase.js";
 import { sendNotification } from "../services/notificationService.js";
 import { validateId, validateText, validateOptionalText } from "../services/utils/validate.js";
+import { rateLimiter, checkBannedWords } from "../services/utils/moderation.js";
 
 const router = express.Router();
 
@@ -10,7 +11,7 @@ const CATEGORIES = ["discussion", "recommendations", "general"];
 
 // POST /forum/post
 // body: { userId, username, category, text }
-router.post("/post", async (req, res) => {
+router.post("/post", rateLimiter("forum_post", 5, 60), async (req, res) => {
   try {
     const { userId, username, category, text } = req.body;
 
@@ -23,6 +24,11 @@ router.post("/post", async (req, res) => {
 
     const textCheck = validateText(text, { fieldName: "text", maxLength: 2000 });
     if (!textCheck.valid) return res.status(400).json({ error: textCheck.error });
+
+    const bannedCheck = checkBannedWords(textCheck.value);
+    if (!bannedCheck.clean) {
+      return res.status(400).json({ error: "Matnda nomaqbul so'z aniqlandi" });
+    }
 
     const usernameCheck = validateOptionalText(username, { fieldName: "username", maxLength: 50 });
     if (!usernameCheck.valid) return res.status(400).json({ error: usernameCheck.error });
@@ -114,7 +120,7 @@ router.post("/post/:postId/like", async (req, res) => {
 
 // POST /forum/post/:postId/comment
 // body: { userId, username, text }
-router.post("/post/:postId/comment", async (req, res) => {
+router.post("/post/:postId/comment", rateLimiter("forum_comment", 10, 60), async (req, res) => {
   try {
     const { userId, username, text } = req.body;
     const { postId } = req.params;
@@ -124,6 +130,11 @@ router.post("/post/:postId/comment", async (req, res) => {
 
     const textCheck = validateText(text, { fieldName: "text", maxLength: 1000 });
     if (!textCheck.valid) return res.status(400).json({ error: textCheck.error });
+
+    const bannedCheck = checkBannedWords(textCheck.value);
+    if (!bannedCheck.clean) {
+      return res.status(400).json({ error: "Matnda nomaqbul so'z aniqlandi" });
+    }
 
     const usernameCheck = validateOptionalText(username, { fieldName: "username", maxLength: 50 });
     if (!usernameCheck.valid) return res.status(400).json({ error: usernameCheck.error });
